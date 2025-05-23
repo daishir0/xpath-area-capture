@@ -1,0 +1,9 @@
+# Selenium for web automation
+selenium>=4.15.0
+
+# Pillow for image processing
+Pillow>=10.0.0
+
+# BeautifulSoup for HTML parsing (optional, for future extensions)
+beautifulsoup4>=4.12.0
+lxml>=4.9.0
