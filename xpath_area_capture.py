@@ -124,7 +124,51 @@ def capture_element_area(url, xpath, output_path):
         
         # 要素を探索
         print(f"要素を探索中: {xpath}")
-        element = get_element_by_xpath(driver, xpath)
+        
+        # ページのHTMLソースを取得して確認
+        if DEBUG:
+            print("ページのHTMLソースを確認中...")
+            page_source = driver.page_source
+            print(f"ページのHTMLソースの長さ: {len(page_source)} 文字")
+            
+            # 特定のIDを持つ要素を探す
+            if "main-image" in page_source:
+                print("'main-image' IDがページ内に存在します")
+            else:
+                print("警告: 'main-image' IDがページ内に存在しません")
+            
+            # ページ内のすべての画像要素を出力
+            print("ページ内の画像要素を探索中...")
+            images = driver.find_elements(By.TAG_NAME, "img")
+            print(f"ページ内の画像要素数: {len(images)}")
+            for i, img in enumerate(images):
+                img_id = img.get_attribute('id')
+                img_src = img.get_attribute('src')
+                img_alt = img.get_attribute('alt')
+                img_class = img.get_attribute('class')
+                print(f"画像 {i+1}: id='{img_id}', class='{img_class}', src='{img_src}', alt='{img_alt}'")
+                
+                # 最初の5つの画像のみ表示（多すぎる場合）
+                if i >= 4 and len(images) > 5:
+                    print(f"... 他 {len(images) - 5} 個の画像があります")
+                    break
+        
+        # 元のXPathで要素を探索
+        try:
+            element = get_element_by_xpath(driver, xpath)
+            print(f"指定されたXPath '{xpath}' で要素が見つかりました")
+        except Exception as e:
+            print(f"指定されたXPath '{xpath}' での要素探索に失敗しました")
+            
+            # ページ内に画像要素が存在するか確認
+            images = driver.find_elements(By.TAG_NAME, "img")
+            if not images:
+                print("エラー: ページ内に画像要素が見つかりません")
+                raise ValueError("ページ内に画像要素が見つかりません。XPathを確認してください。")
+            
+            print("\nエラー: 指定されたXPathの要素が見つかりませんでした。")
+            print("ページの構造を確認して、正しいXPathを指定してください。")
+            raise ValueError(f"XPath '{xpath}' の要素が見つかりませんでした。")
         
         # 要素が表示されるようにスクロール
         driver.execute_script("arguments[0].scrollIntoView(true);", element)
