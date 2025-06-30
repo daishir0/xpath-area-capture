@@ -80,27 +80,202 @@ def wait_for_page_load(driver):
     WebDriverWait(driver, 30).until(page_has_loaded)
     time.sleep(5)  # 追加の待機時間
 
+def scroll_and_wait_for_content(driver, target_xpath, max_attempts=3):
+    """
+    段階的にスクロールしながら要素を探索
+    """
+    if DEBUG:
+        print(f"段階的スクロール戦略を開始: {target_xpath}")
+    
+    # 1. 通常の待機で要素を探索
+    try:
+        element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, target_xpath))
+        )
+        if DEBUG:
+            print("通常の待機で要素が見つかりました")
+        return element
+    except Exception as e:
+        if DEBUG:
+            print(f"通常の待機では要素が見つかりませんでした: {str(e)}")
+    
+    # 2. ページ全体をスクロールしながら探索
+    for attempt in range(max_attempts):
+        if DEBUG:
+            print(f"スクロール試行 {attempt + 1}/{max_attempts}")
+        
+        # 段階的にスクロール
+        scroll_positions = [0.25, 0.5, 0.75, 1.0]  # ページの25%ずつスクロール
+        
+        for position in scroll_positions:
+            driver.execute_script(f"window.scrollTo(0, document.body.scrollHeight * {position});")
+            time.sleep(2)  # スクロール後の待機
+            
+            if DEBUG:
+                print(f"スクロール位置: {int(position * 100)}%")
+            
+            # 要素の存在を確認
+            try:
+                element = WebDriverWait(driver, 3).until(
+                    EC.presence_of_element_located((By.XPATH, target_xpath))
+                )
+                if DEBUG:
+                    print(f"スクロール位置 {int(position * 100)}% で要素が見つかりました")
+                return element
+            except:
+                continue
+        
+        # 最下部で少し長めに待機
+        if DEBUG:
+            print("最下部で追加待機中...")
+        time.sleep(5)
+        
+        # 最下部での最終確認
+        try:
+            element = WebDriverWait(driver, 5).until(
+                EC.presence_of_element_located((By.XPATH, target_xpath))
+            )
+            if DEBUG:
+                print("最下部での最終確認で要素が見つかりました")
+            return element
+        except:
+            # 上部に戻ってから再度試行
+            if DEBUG:
+                print("上部に戻って再試行します")
+            driver.execute_script("window.scrollTo(0, 0);")
+            time.sleep(2)
+    
+    raise ValueError(f"スクロール後も要素が見つかりません: {target_xpath}")
+
+def advanced_content_loading_strategy(driver, target_xpath):
+    """
+    高度な動的コンテンツ読み込み戦略
+    """
+    if DEBUG:
+        print("高度な動的コンテンツ読み込み戦略を開始")
+    
+    # Step 1: 基本的な待機
+    wait_for_page_load(driver)
+    
+    # Step 2: ネットワークアクティビティの監視を設定
+    driver.execute_script("""
+        window.networkIdle = false;
+        window.requestCount = 0;
+        window.loadingComplete = false;
+        
+        // XMLHttpRequest の監視
+        const originalXHR = window.XMLHttpRequest;
+        window.XMLHttpRequest = function() {
+            const xhr = new originalXHR();
+            const originalOpen = xhr.open;
+            const originalSend = xhr.send;
+            
+            xhr.open = function(...args) {
+                window.requestCount++;
+                return originalOpen.apply(this, args);
+            };
+            
+            xhr.addEventListener('loadend', function() {
+                window.requestCount--;
+                if (window.requestCount <= 0) {
+                    setTimeout(() => {
+                        window.networkIdle = true;
+                        window.loadingComplete = true;
+                    }, 1000);
+                }
+            });
+            
+            return xhr;
+        };
+        
+        // Fetch API の監視
+        if (window.fetch) {
+            const originalFetch = window.fetch;
+            window.fetch = function(...args) {
+                window.requestCount++;
+                return originalFetch.apply(this, args).finally(() => {
+                    window.requestCount--;
+                    if (window.requestCount <= 0) {
+                        setTimeout(() => {
+                            window.networkIdle = true;
+                            window.loadingComplete = true;
+                        }, 1000);
+                    }
+                });
+            };
+        }
+        
+        // 初期状態を設定
+        setTimeout(() => {
+            if (window.requestCount <= 0) {
+                window.networkIdle = true;
+                window.loadingComplete = true;
+            }
+        }, 3000);
+    """)
+    
+    # Step 3: スクロールによるコンテンツ読み込み
+    try:
+        return scroll_and_wait_for_content(driver, target_xpath)
+    except ValueError:
+        if DEBUG:
+            print("スクロール戦略が失敗、ネットワークアイドル待機を試行")
+    
+    # Step 4: ネットワークアイドル状態の待機
+    try:
+        WebDriverWait(driver, 30).until(
+            lambda d: d.execute_script("return window.loadingComplete === true")
+        )
+        if DEBUG:
+            print("ネットワークアイドル状態を確認")
+    except Exception as e:
+        if DEBUG:
+            print(f"ネットワークアイドル待機がタイムアウト: {str(e)}")
+    
+    # 最終的な要素探索
+    try:
+        element = WebDriverWait(driver, 10).until(
+            EC.presence_of_element_located((By.XPATH, target_xpath))
+        )
+        if DEBUG:
+            print("最終的な要素探索で要素が見つかりました")
+        return element
+    except Exception as e:
+        if DEBUG:
+            print(f"最終的な要素探索も失敗: {str(e)}")
+        raise ValueError(f"全ての戦略を試行しても要素が見つかりません: {target_xpath}")
+
 def get_element_by_xpath(driver, xpath):
     """
     XPathで要素を取得し、その要素が画像の場合はsrcの値も確認
+    動的コンテンツ対応戦略を使用
     """
-    element = WebDriverWait(driver, 30).until(
-        EC.presence_of_element_located((By.XPATH, xpath))
-    )
+    # 高度な動的コンテンツ読み込み戦略を使用
+    element = advanced_content_loading_strategy(driver, xpath)
     
     # 要素の表示を待機
-    WebDriverWait(driver, 30).until(
-        EC.visibility_of_element_located((By.XPATH, xpath))
-    )
+    try:
+        WebDriverWait(driver, 30).until(
+            EC.visibility_of_element_located((By.XPATH, xpath))
+        )
+    except Exception as e:
+        if DEBUG:
+            print(f"要素の表示待機でタイムアウト: {str(e)}")
+        # 要素が存在するが非表示の場合もあるので、処理を続行
     
     # img要素の場合、画像の読み込みを待機
     if element.tag_name == 'img':
-        WebDriverWait(driver, 30).until(
-            lambda d: d.execute_script(
-                "return arguments[0].complete && typeof arguments[0].naturalWidth != 'undefined' && arguments[0].naturalWidth > 0",
-                element
+        try:
+            WebDriverWait(driver, 30).until(
+                lambda d: d.execute_script(
+                    "return arguments[0].complete && typeof arguments[0].naturalWidth != 'undefined' && arguments[0].naturalWidth > 0",
+                    element
+                )
             )
-        )
+        except Exception as e:
+            if DEBUG:
+                print(f"画像読み込み待機でタイムアウト: {str(e)}")
+        
         if DEBUG:
             src = element.get_attribute('src')
             print(f"画像のsrc: {src}")
