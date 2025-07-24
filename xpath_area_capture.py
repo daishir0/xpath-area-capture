@@ -349,6 +349,33 @@ def capture_element_area(url, xpath, output_path):
         driver.execute_script("arguments[0].scrollIntoView(true);", element)
         time.sleep(2)  # スクロールのアニメーションを待機
         
+        # ヘッダーとフッターを非表示にする
+        print("ヘッダーとフッターを非表示にしています...")
+        result = driver.execute_script("""
+            // ヘッダー要素を非表示
+            var headers = document.getElementsByTagName('header');
+            for (var i = 0; i < headers.length; i++) {
+                headers[i].style.display = 'none';
+            }
+            
+            // フッター要素を非表示
+            var footers = document.getElementsByTagName('footer');
+            for (var i = 0; i < footers.length; i++) {
+                footers[i].style.display = 'none';
+            }
+            
+            return {
+                headerCount: headers.length,
+                footerCount: footers.length
+            };
+        """)
+        
+        if DEBUG:
+            print(f"非表示にした要素: ヘッダー {result['headerCount']}個, フッター {result['footerCount']}個")
+        
+        # 変更が反映されるまで少し待機
+        time.sleep(1)
+        
         # JavaScriptで要素の情報を取得
         info = driver.execute_script("""
             var element = arguments[0];
