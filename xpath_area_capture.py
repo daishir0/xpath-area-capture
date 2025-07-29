@@ -345,9 +345,9 @@ def capture_element_area(url, xpath, output_path):
             print("ページの構造を確認して、正しいXPathを指定してください。")
             raise ValueError(f"XPath '{xpath}' の要素が見つかりませんでした。")
         
-        # 要素が表示されるようにスクロール
-        driver.execute_script("arguments[0].scrollIntoView(true);", element)
-        time.sleep(2)  # スクロールのアニメーションを待機
+        # 要素が表示されるようにスクロール（中央配置）
+        driver.execute_script("arguments[0].scrollIntoView({block: 'center', behavior: 'smooth'});", element)
+        time.sleep(3)  # スクロールのアニメーションを待機
         
         # ヘッダーとフッターを非表示にする
         print("ヘッダーとフッターを非表示にしています...")
