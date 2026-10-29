@@ -4,9 +4,8 @@
 A tool to capture screenshots of web elements specified by XPath. It allows you to take precise screenshots of specific elements on a webpage, ensuring accurate capture of the target element.
 
 ## Installation
-1. Clone the repository
+1. Extract the distributed package (zip) and move into the directory
 ```bash
-git clone https://github.com/daishir0/xpath-area-capture
 cd xpath-area-capture
 ```
 
@@ -53,7 +52,7 @@ Parameters:
 - Debug mode can be enabled in config.py to show detailed information
 
 ## License
-This project is licensed under the MIT License - see the LICENSE file for details.
+Copyright (c) トヨシステム株式会社. All rights reserved. 無断複製・再配布を禁じます。
 
 ---
 
@@ -63,9 +62,8 @@ This project is licensed under the MIT License - see the LICENSE file for detail
 XPathで指定したWeb要素のスクリーンショットを取得するツールです。Webページ上の特定の要素を正確にキャプチャすることができます。
 
 ## インストール方法
-1. リポジトリをクローン
+1. 配布パッケージ(zip)を展開し、展開先ディレクトリへ移動
 ```bash
-git clone https://github.com/daishir0/xpath-area-capture
 cd xpath-area-capture
 ```
 
@@ -112,4 +110,4 @@ python xpath_area_capture.py "https://example.com" "//img[@id='main-image']" "ou
 - config.pyでデバッグモードを有効にすると詳細な情報が表示されます
 
 ## ライセンス
-このプロジェクトはMITライセンスの下でライセンスされています。詳細はLICENSEファイルを参照してください。
+本ソフトウェアの著作権はトヨシステム株式会社に帰属します。無断複製・再配布を禁じます。
